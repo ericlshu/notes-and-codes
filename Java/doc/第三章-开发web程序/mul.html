@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>九九乘法表</title>
+</head>
+<body>
+<script src="js/p5.js"></script>
+<script>
+function setup() {
+  createCanvas(600, 400);
+  loadJSON("http://localhost:8080/mul", doText);
+}
+
+function doText(json) {
+  for (let i=0; i<json.length; i++) {
+    let row = json[i];
+    for(let j=0; j<row.length; j++) {
+        let x = 60*j;
+        let y = 20*i;
+        fill(255);
+        rect(x, y, 60, 20);
+        fill(0);
+        text(row[j], x+10, y+15);
+    }
+  }
+}
+
+
+</script>
+</body>
+</html>

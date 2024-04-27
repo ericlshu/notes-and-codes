@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>贷款计算器</title>
+    <style>
+        body {
+            font-size: 0.9em;
+        }
+        #detailResult td, #detailResult th{
+            text-align: left;
+            border-bottom: 1px gray solid;
+        }
+        #totalResult {
+            display:none;
+        }
+        #totalResult td{
+            padding-right: 10px;
+        }
+    </style>
+</head>
+<body>
+<table class="c_table" cellspacing="1" cellpadding="0" border="0">
+    <tr><td colspan="2"  class="caltitle">按揭贷款计算器(等额本息还款/等额本金还款)</td></tr>
+    <tr>
+        <td width="40%" class="left">贷款金额</td>
+        <td width="60%" class="right"><input type="number"  id="principal" class="inputtxt" maxlength="20" value="100000"/>元</td>
+    </tr>
+    <tr>
+        <td width="40%" class="left">贷款期限</td>
+        <td width="60%" class="right"><input type="number"  id="months" class="inputtxt" maxlength="3" value="10"/>月（1-360）</td>
+    </tr>
+    <tr>
+        <td width="40%" class="left">贷款年利率</td>
+        <td width="60%" class="right"><input type="number"  id="annualInterestRate" class="inputtxt" maxlength="20" value="6"/>% </td>
+    </tr>
+    <tr>
+        <td width="40%" class="left"></td>
+        <td width="60%" class="right">
+            <input type="button" value="总还款额" id="calculate">
+            <input type="button" value="总还款额及详情" id="calculateDetail">
+        </td>
+    </tr>
+    <tr>
+        <td colspan="2">&nbsp;</td>
+    </tr>
+</table>
+<div id="error" style="color:red;"></div>
+<br>
+<table id="totalResult" class="c_table" cellspacing="1" cellpadding="0" border="0">
+    <tr>
+        <td width="20%">还款总额</td>
+        <td width="30%" id="totalRepayment"></td>
+        <td width="20%">利息总额</td>
+        <td width="30%" id="totalInterestRepayment"></td>
+    </tr>
+</table>
+<table id="detailResult" style="display:none" class="c_table" cellspacing="1" cellpadding="0" border="0">
+    <thead>
+    <tr>
+        <th width="10%">月份</th>
+        <th width="30%">还月供=(还本金+还利息)</th>
+        <th width="20%">还本金</th>
+        <th width="20%">还利息</th>
+        <th width="20%">待偿还本金</th>
+    </tr>
+    </thead>
+    <tbody id="tbody">
+    </tbody>
+</table>
+<script>
+    function test1() {
+        document.getElementById("error").innerText = '';
+        const p = document.getElementById("principal").value; // 贷款金额
+        const m = document.getElementById("months").value;    // 贷款月数
+        const yr = document.getElementById("annualInterestRate").value; // 年利率
+        fetch(`http://localhost:8080/cal?p=${p}&m=${m}&yr=${yr}`)
+            .then(resp=>resp.text())
+            .then(text=>{
+                if(isJson(text)){
+                    let json = JSON.parse(text);
+                    if(json.status === 404 || json.status === 500) {
+                        if(json.message) {
+                            document.getElementById("error").innerText = json.message;
+                        } else {
+                            document.getElementById("error").innerText = json.error;
+                        }
+                        json = ["-", "-"];
+                    }
+                    const div = document.getElementById("totalResult");
+                    document.getElementById("totalRepayment").innerText = json[0];
+                    document.getElementById("totalInterestRepayment").innerText = json[1];
+                } else {
+                    document.getElementById("totalRepayment").innerText = text;
+                }
+            });
+    }
+
+    function test2() {
+        document.getElementById("error").innerText = '';
+        const p = document.getElementById("principal").value;
+        const m = document.getElementById("months").value;
+        const yr = document.getElementById("annualInterestRate").value;
+        fetch(`http://localhost:8080/details?p=${p}&m=${m}&yr=${yr}`)
+            .then(resp=>resp.json())
+            .then(json=>{
+                if(json.status === 404 || json.status === 500) {
+                    if(json.message) {
+                        document.getElementById("error").innerText = json.message;
+                    } else {
+                        document.getElementById("error").innerText = json.error;
+                    }
+                    json = [];
+                }
+                const tbody = document.getElementById("tbody");
+                for(let i = 0; i < json.length; i++){
+                    const tr = document.createElement("tr");
+                    const td0 = document.createElement("td");
+                    const td1 = document.createElement("td");
+                    const td2 = document.createElement("td");
+                    const td3 = document.createElement("td");
+                    const td4 = document.createElement("td");
+                    td0.innerText = json[i][0];
+                    td1.innerText = json[i][1];
+                    td2.innerText = json[i][2];
+                    td3.innerText = json[i][3];
+                    td4.innerText = json[i][4];
+                    tr.appendChild(td0);
+                    tr.appendChild(td1);
+                    tr.appendChild(td2);
+                    tr.appendChild(td3);
+                    tr.appendChild(td4);
+                    tbody.appendChild(tr);
+                }
+            });
+    }
+
+    function isJson(str) {
+        try {
+            let json = JSON.parse(str);
+            if(typeof json === "object"){
+                return true;
+            }
+            return false;
+        } catch(e) {
+            return false;
+        }
+    }
+
+    document.getElementById("calculate").onclick = function() {
+        const div1 = document.getElementById("totalResult");
+        div1.style.display = "block";
+        const div2 = document.getElementById("detailResult");
+        div2.style.display = "none";
+        const tbody = document.getElementById("tbody");
+        tbody.innerHTML = "";
+        test1();
+    }
+
+    document.getElementById("calculateDetail").onclick = function() {
+        const div1 = document.getElementById("totalResult");
+        div1.style.display = "block";
+        const div2 = document.getElementById("detailResult");
+        div2.style.display = "block";
+        const tbody = document.getElementById("tbody");
+        tbody.innerHTML = "";
+        test1();
+        test2();
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<!--数字框-->
+<input type="number" name="a" id="a" value="0"> +
+<input type="number" name="b" id="b" value="0">
+<!--=号按钮-->
+<input type="button" value="=" id="evaluate">
+<span id="c"></span>
+<script>
+    document.querySelector("#evaluate").onclick = function() {
+        // 获取两个数字框的值
+        var a = document.querySelector("#a").value;
+        var b = document.querySelector("#b").value;
+        // http://localhost:8080/add?a=100&b=200
+        // fetch("http://localhost:8080/add?a=" + a + "&b=" + b)
+        fetch(`http://localhost:8080/add?a=${a}&b=${b}`)
+            .then(resp=>resp.text())
+            .then(text=>document.querySelector("#c").innerText = text)
+    }
+</script>
+</body>
+</html>

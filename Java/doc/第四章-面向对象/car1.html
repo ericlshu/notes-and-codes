@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        main canvas {
+            display: block;
+            /* margin: 0 auto; */
+            margin-left: 100px;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="top:0; right:0; position: absolute;">
+        <input type="text" id="newCar" value='new Car("red", 5)'>
+        <input type="button" value="添加汽车" id="addCar">
+        <input type="button" value="可以跑了" id="runCar">
+    </div>
+    <script src="p5.js"></script>
+    <script type="text/javascript">
+        class Car {
+            #x;
+            #y;
+            constructor(color, speed, x, y) {
+                this.color = color;  // 颜色
+                this.speed = speed;  // 速度
+                this.stopped = true;  // 是否停止
+                this.#x = x;
+                this.#y = y;
+            }
+            run() {
+                this.stopped = false;
+            }
+            update() {
+                if(this.stopped) {
+                    return;
+                }
+
+                this.#y -= this.speed;
+                if( this.#y <= 20) {
+                    this.#y = 20;
+                }
+            }
+            display() {
+                fill(this.color);
+                rect(this.#x, this.#y, 10, -20);
+            }
+            init(x, y) {
+                this.#x = x;
+                this.#y = y;
+            }
+        }
+
+        const cars = [];
+
+        function setup() {
+            createCanvas(200, 400);
+            let x = 0;
+            cars.push(new Car("white", 1, x += 20, height));
+            cars.push(new Car("silver", 3, x += 20, height));
+            cars.push(new Car("black", 2, x += 20, height));
+        }
+
+        function draw() {
+            background("beige");
+            for (let i = 0; i < cars.length; i++) {
+                let c = cars[i];
+                c.update();
+                c.display();
+            }
+        }
+        document.getElementById("addCar").onclick = function () {
+            const c = eval(document.getElementById("newCar").value);
+            c.init((cars.length + 1) * 20, 400);
+            cars.push(c)
+        }
+        document.getElementById("runCar").onclick = function () {
+            cars.forEach(c => c.run())
+        }
+    </script>
+</body>
+
+</html>

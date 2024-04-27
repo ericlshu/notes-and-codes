@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        main canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="top:0; right:0; position: absolute;">
+        <table>
+            <!-- <tr>
+                <td><input type="text" class="newCar" value='new LineCar("green", 3)'></td>
+                <td><input type="button" value="添加汽车" class="addCar"></td>
+            </tr>
+            <tr>
+                <td><input type="text" class="newCar" value='new SinCar("blue", 3)'></td>
+                <td><input type="button" value="添加汽车" class="addCar"></td>
+            </tr>
+            <tr>
+                <td><input type="text" class="newCar" value='new ZCar("orange", 3)'></td>
+                <td><input type="button" value="添加汽车" class="addCar"></td>
+            </tr> -->
+            <tr>
+                <td colspan="2"><input type="button" value="可以跑了" id="runCar"></td>
+            </tr>
+        </table>
+        
+    </div>
+    <script src="p5.js"></script>
+    <script>
+        const spaceing = 40;
+        class Car {
+            constructor(color, speed, x, y) {
+                this.color = color;
+                this.speed = speed;
+                this.stopped = true;
+                this.x = x;
+                this.y = y;
+            }
+            run() {
+                this.stopped = false;
+            }
+            display() {
+                let c = color(this.color);
+                let p = color(c._getRed(), c._getGreen(), c._getBlue(), 40)
+                // let p = color(255, 0, 0, 128);
+                fill(p);
+                rect(this.x, this.y, 10, -20);
+            }
+        }
+        class LineCar extends Car {
+            constructor(color, speed, x, y) {
+                super(color, speed, x, y);
+            }
+            update() {
+                if (this.stopped) {
+                    return;
+                }
+                this.y -= this.speed;
+                if (this.y <= 20) {
+                    this.y = 20;
+                    this.stopped = true;
+                }
+            }
+        }
+        class ZCar extends Car {
+            constructor(color, speed, x, y) {
+                super(color, speed, x, y);                
+                this.swap = true;
+            }
+            update() {
+                if (this.stopped) {
+                    this.xl = this.x - 15;
+                    this.xh = this.x + 15;
+                    return;
+                }
+                if (this.swap) {
+                    this.x -= 1;
+                    if (this.x < this.xl) {
+                        this.x = this.xl;
+                        this.swap = false;
+                    }
+                } else {
+                    this.x += 1;
+                    if (this.x > this.xh) {
+                        this.x = this.xh;
+                        this.swap = true;
+                    }
+                }
+                this.y -= this.speed;
+                if (this.y <= 20) {
+                    this.y = 20;
+                    this.stopped = true;
+                }
+            }
+        }
+        class SinCar extends Car {
+            constructor(color, speed, x, y) {
+                super(color, speed, x, y);
+                this.th = 0;
+            }
+            update() {
+                if (this.stopped) {
+                    return;
+                }
+                this.th += 0.2;
+                this.x += sin(this.th);
+                this.y -= this.speed;
+                if (this.y <= 20) {
+                    this.y = 20;
+                    this.stopped = true;
+                }
+            }
+        }
+        const cars = [];
+
+        function setup() {
+            createCanvas(400, 400);
+            stroke(0, 0, 0, 60)
+            let x = 0;
+            cars.push(new LineCar("gold", 3, x += spaceing, height));
+            cars.push(new SinCar("red", 3, x += spaceing, height));
+            cars.push(new ZCar("silver", 3, x += spaceing, height));
+        }
+
+        function draw() {
+            for (let i = 0; i < cars.length; i++) {
+                let c = cars[i];
+                c.update();
+                c.display();
+            }
+        }
+        
+        const addCars = document.querySelectorAll(".addCar");
+        const newCars = document.querySelectorAll(".newCar");
+        for(let i = 0; i < addCars.length; i++) {
+            addCars[i].onclick = function() {
+                const c = eval(newCars[i].value);
+                c.x = (cars.length + 1) * spaceing;
+                c.y = 400;
+                cars.push(c)
+                console.log(c instanceof Car)
+            }
+        }
+        document.getElementById("runCar").onclick = function () {
+            cars.forEach(c => c.run())
+        }
+    </script>
+</body>
+
+</html>

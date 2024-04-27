@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        main canvas {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="top:0; right:0; position: absolute;" id="buttons1">
+    </div>
+    <div style="bottom: 0; right: 0; position:absolute;" id="buttons2">
+    </div>
+    <script src="p5.js"></script>
+    <script>
+        class Card {
+            constructor(dmg, hp, path) {
+                this.dmg = dmg;
+                this.hp = hp;
+                this.path = path;
+                this.img = null;
+                this.pos = null;
+                this.initPos = null;
+                this.stopped = true;
+                this.reverse = false;
+                this.speed = 30;
+                this.target = null;
+                this.killed = false;
+            }
+            clone() {
+                return new Card(this.dmg, this.hp, this.path)
+            }
+            init(pos) {
+                this.img = loadImage(`img/${this.path}`);
+                this.pos = pos;
+                this.initPos = this.pos.copy();
+            }
+            attack(target) {
+                this.stopped = false;
+                this.target = target;
+                this.hurt(target.dmg)
+                target.hurt(this.dmg)
+                this.shouldKill()
+                target.shouldKill()
+            }
+            hurt(dmg) {
+                this.hp -= dmg;
+            }
+            shouldKill() {
+                if (this.hp <= 0) {
+                    this.killed = true;
+                    this.dmg = 0;
+                }
+            }
+            move() {
+                if (!this.stopped) {
+                    if (this.reverse) {
+                        let dis = p5.Vector.sub(this.pos, this.initPos);
+                        if (p5.Vector.dist(this.pos, this.initPos) < HEIGHT / 2) {
+                            this.reverse = false;
+                            this.pos = this.initPos.copy();
+                            this.stopped = true;
+                            return;
+                        }
+                        let theta = dis.heading();
+                        this.pos.sub(cos(theta) * this.speed, sin(theta) * this.speed)
+
+                    } else {
+                        let dis = p5.Vector.sub(this.target.pos, this.pos);
+                        if (p5.Vector.dist(this.target.pos, this.pos) < HEIGHT) {
+                            this.reverse = true;
+                            return;
+                        }
+                        let theta = dis.heading();
+                        this.pos.add(cos(theta) * this.speed, sin(theta) * this.speed)
+                    }
+                }
+            }
+        }
+        const origin = [
+            new Card(1, 1, "2.png"),
+            new Card(2, 2, "3.png"),
+            new Card(2, 1, "5.png"),
+            new Card(1, 1, "6.png"),
+            new Card(3, 1, "7.png"),
+            new Card(1, 4, "8.png"),
+        ];
+        const enemy = [];
+        const WIDTH = 128;
+        const HEIGHT = 192;
+        let hero;
+        let graveImg;
+        function setup() {
+
+            createCanvas(800, 600);
+            textAlign(CENTER)
+            textSize(18);
+            const len = 6;
+            for (let i = 0; i < len; i++) {
+                let c = Math.floor(random(len));
+                enemy.push(origin[c].clone());
+            }
+            hero = new Card(10, 10, "4.png");
+            for (let i = 0; i < enemy.length; i++) {
+                let c = enemy[i];
+                console.log(c)
+                c.init(new p5.Vector(i * WIDTH, 0));
+            }
+            hero.init(new p5.Vector((enemy.length - 1) * WIDTH / 2, 2 * HEIGHT))
+            graveImg = loadImage(`img/g.png`);
+
+            const buttons1 = document.getElementById("buttons1");
+            for (let i = 0; i < enemy.length; i++) {
+                let e = document.createElement("input");
+                e.type = "button";
+                e.value = i;
+                e.onclick = function () {
+                    if (!enemy[i].killed) {
+                        enemy[i].attack(hero);
+                    }
+                }
+                buttons1.appendChild(e)
+            }
+
+            const buttons2 = document.getElementById("buttons2");
+            for (let i = 0; i < enemy.length; i++) {
+                let e = document.createElement("input");
+                e.type = "button";
+                e.value = i;
+                e.onclick = function () {
+                    if (!hero.killed)
+                        hero.attack(enemy[i]);
+                }
+                buttons2.appendChild(e)
+            }
+        }
+
+        function draw() {
+            background(255);
+            enemy.forEach(e => {
+                e.move();
+                if (e.killed && e.pos.equals(e.initPos)) {
+                    image(graveImg, e.pos.x + 25, e.pos.y + 30, WIDTH / 1.5, HEIGHT / 1.5)
+                } else {
+                    image(e.img, e.pos.x, e.pos.y, WIDTH, HEIGHT)
+                    fill("gold")
+                    rect(e.pos.x + 10, e.pos.y + 172, 26, -30);
+                    fill("white")
+                    text(e.dmg, e.pos.x + 10 + 12, e.pos.y + 172 - 8);
+                    fill("red")
+                    rect(e.pos.x + 94, e.pos.y + 172, 26, -30);
+                    fill("white")
+                    text(e.hp, e.pos.x + 94 + 12, e.pos.y + 172 - 8);
+                }
+
+            })
+            hero.move()
+            if (hero.killed && hero.pos.equals(hero.initPos)) {
+                image(graveImg, hero.pos.x + 25, hero.pos.y + 30, WIDTH / 1.5, HEIGHT / 1.5)
+            } else {
+                image(hero.img, hero.pos.x, hero.pos.y, WIDTH, HEIGHT);
+                fill("gold")
+                rect(hero.pos.x + 10, hero.pos.y + 172, 26, -30);
+                fill("white")
+                text(hero.dmg, hero.pos.x + 10 + 12, hero.pos.y + 172 - 8);
+                fill("red")
+                rect(hero.pos.x + 94, hero.pos.y + 172, 26, -30);
+                fill("white")
+                text(hero.hp, hero.pos.x + 94 + 12, hero.pos.y + 172 - 8);
+            }
+        }
+    </script>
+</body>
+
+</html>

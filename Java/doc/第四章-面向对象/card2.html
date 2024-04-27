@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        main canvas {
+            display: block;
+            margin: 0 auto;
+        }
+
+        img {
+            width: 60px;
+            cursor: pointer;
+        }
+
+        img:hover {
+            box-shadow: 0 0 10px 5px rgba(81, 203, 238, 1) inset
+        }
+    </style>
+</head>
+
+<body>
+    <div style="top:0; right:0; position: absolute;" id="buttons1">
+    </div>
+    <div style="top:200px; right:0; position: absolute; background-color: rgba(0,0,0,0.25);">
+        <div>
+            <input type="text" id="newCard">
+            <input type="button" id="addCard" value="添加">
+        </div>
+        <div id="cards">
+
+        </div>
+    </div>
+    <div style="bottom: 0; right: 0; position:absolute;" id="buttons2">
+    </div>
+    <script src="p5.js"></script>
+    <script>
+        class Card {
+            constructor(dmg, hp, path) {
+                this.dmg = dmg;
+                this.hp = hp;
+                this.path = path;
+                this.img = null;
+                this.graveImg = null;
+                this.pos = null;
+                this.initPos = null;
+                this.stopped = true;
+                this.reverse = false;
+                this.speed = 30;
+                this.target = null;
+                this.killed = false;
+            }
+            clone() {
+                return new Card(this.dmg, this.hp, this.path)
+            }
+            init(pos, graveImg) {
+                this.img = loadImage(`img/${this.path}`);
+                this.pos = pos;
+                this.initPos = this.pos.copy();
+                this.graveImg = graveImg;
+            }
+            attack(target) {
+                if (this.killed) {
+                    return;
+                }
+                this.stopped = false;
+                this.target = target;
+                this.hurt(target.dmg);
+                target.hurt(this.dmg);
+            }
+            hurt(dmg) {
+                this.hp -= dmg;
+            }
+            checkKilled() {
+                if (this.hp <= 0) {
+                    this.killed = true;
+                    this.dmg = 0;
+                }
+            }
+            update() {
+                this.checkKilled();
+                if (!this.stopped) {
+                    if (this.reverse) {
+                        let dis = p5.Vector.sub(this.pos, this.initPos);
+                        if (p5.Vector.dist(this.pos, this.initPos) < HEIGHT / 2) {
+                            this.reverse = false;
+                            this.pos = this.initPos.copy();
+                            this.stopped = true;
+                            return;
+                        }
+                        let theta = dis.heading();
+                        this.pos.sub(cos(theta) * this.speed, sin(theta) * this.speed)
+                    } else {
+                        let dis = p5.Vector.sub(this.target.pos, this.pos);
+                        if (p5.Vector.dist(this.target.pos, this.pos) < HEIGHT) {
+                            this.reverse = true;
+                            return;
+                        }
+                        let theta = dis.heading();
+                        this.pos.add(cos(theta) * this.speed, sin(theta) * this.speed)
+                    }
+                }
+            }
+            display() {
+                if (this.killed && this.pos.equals(this.initPos)) {
+                    image(this.graveImg, this.pos.x + 25, this.pos.y + 30, WIDTH / 1.5, HEIGHT / 1.5)
+                } else {
+                    image(this.img, this.pos.x, this.pos.y, WIDTH, HEIGHT)
+                    fill("gold")
+                    rect(this.pos.x + 10, this.pos.y + 172, 26, -30);
+                    fill("white")
+                    text(this.dmg, this.pos.x + 10 + 12, this.pos.y + 172 - 8);
+                    fill("red")
+                    rect(this.pos.x + 94, this.pos.y + 172, 26, -30);
+                    fill("white")
+                    text(this.hp, this.pos.x + 94 + 12, this.pos.y + 172 - 8);
+                }
+            }
+        }
+        const origin = [
+            new Card(1, 1, "2.png"),
+            new Card(2, 2, "3.png"),
+            new Card(2, 1, "5.png"),
+            new Card(1, 1, "6.png"),
+            new Card(3, 1, "7.png"),
+            new Card(1, 4, "8.png"),
+        ];
+        const enemy = [];
+        const WIDTH = 128;
+        const HEIGHT = 192;
+        let hero;
+        function setup() {
+            createCanvas(800, 600);
+            textAlign(CENTER)
+            textSize(18);
+
+            const graveImg = loadImage(`img/g.png`);
+            hero = new Card(10, 10, "4.png");
+            hero.init(new p5.Vector(0, 2 * HEIGHT), graveImg)
+
+            // 添加卡牌选项
+            const cards = document.getElementById("cards")
+            const newCard = document.getElementById("newCard")
+            for (let i = 0; i < origin.length; i++) {
+                let c = origin[i];
+                let img = document.createElement("img");
+                img.src = `img/${c.path}`;
+                img.onclick = function () {
+                    newCard.value = `new Card(${c.dmg}, ${c.hp}, "${c.path}")`
+                }
+                cards.appendChild(img)
+            }
+
+            // 添加卡牌
+            document.getElementById("addCard").onclick = function () {
+                const newCard = document.getElementById("newCard")
+                let c = eval(newCard.value);
+                let len = enemy.length;
+                c.init(new p5.Vector(len * WIDTH, 0), graveImg);
+                createAttackBtnTop(len)
+                createAttackBtnBottom(len)
+                enemy.push(c);
+            }
+        }
+
+        function createAttackBtnBottom(len) {
+            const buttons2 = document.getElementById("buttons2");
+            let e = document.createElement("input");
+            e.type = "button";
+            e.value = len;
+            e.onclick = function () {
+                hero.attack(enemy[len]);
+            }
+            buttons2.appendChild(e)
+        }
+
+        function createAttackBtnTop(len) {
+            const buttons1 = document.getElementById("buttons1");
+            let e = document.createElement("input");
+            e.type = "button";
+            e.value = len;
+            e.onclick = function () {
+                enemy[len].attack(hero);
+            }
+            buttons1.appendChild(e)
+        }
+
+        function draw() {
+            background(255);
+            enemy.forEach(e => {
+                e.update();
+                e.display();
+            })
+            hero.update();
+            hero.display();
+        }
+    </script>
+</body>
+
+</html>

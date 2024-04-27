@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态数组</title>
+    <style>
+        #buttons {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 250px;
+        }
+
+        #controller {
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        canvas {
+            /* border: 1px solid black; */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="controller">
+        <div>
+            <input type="text" id="i" value="1,2,3,4,5">
+            <select id="addIdx">
+                <option>0</option>
+            </select>
+            <input type="button" value="add" id="addBtn" />
+            <input type="button" value="addLast" id="addLast" />
+        </div>
+        <div>
+            <select id="removeIdx"></select>
+            <input type="button" value="remove" id="removeBtn" />
+        </div>
+    </div>
+    <div id="buttons"><input type="button" value="play" id="playBtn" /></div>
+    <script src="p5.js"></script>
+    <script>
+        function createFrame(op) {
+            let i = frames.length;
+            let btn = document.createElement("input");
+            btn.type = "button";
+            if (op.isKeyFrame === true) {
+                btn.value = `* ${i}`;
+            } else {
+                btn.value = `${i}`;
+            }
+            btn.onclick = function () {
+                idx = i;
+            }
+            document.getElementById("buttons").appendChild(btn)
+
+            frames.push(function () { frame(op) });
+        }
+        class ArrayList {
+            constructor() {
+                this.size = 0;
+                this.array = new Int32Array(new ArrayBuffer(32));
+                this.capacity = this.array.byteLength / 4;
+            }
+            _grow() {
+                let newSize = this.array.byteLength + (this.array.byteLength >> 1);
+                if (newSize % 4 != 0) {
+                    newSize += (4 - newSize % 4)
+                }
+                // console.log(newSize)
+                let newArray = new Int32Array(new ArrayBuffer(newSize));
+                createFrame({ list: this.clone(), newArray: [...newArray], isKeyFrame: true, colors: [...colors] })
+                for (let i = 0; i < this.size; i++) {
+                    newArray[i] = this.array[i];
+                }
+                createFrame({ list: this.clone(), newArray: [...newArray], colors: [...colors] })
+                this.array = newArray;
+                changeColor()
+                this.capacity = this.array.byteLength / 4;
+                createFrame({ list: this.clone(), colors: [...colors] })
+            }
+            add(op) {
+                if (op.index === undefined) {
+                    this._add(this.size, op.e);
+                    return;
+                }
+                this._add(op.index, op.e);
+            }
+            _add(i, e) {
+                if (this.size == this.capacity) {
+                    this._grow();
+                }
+                if (i < this.size) {
+                    for (let j = this.size; j > i; j--) {
+                        this.array[j] = this.array[j - 1];
+                        createFrame({ list: this.clone(), colors: [...colors] })
+                    }
+                    //this.array.copyWithin(i + 1, i);
+                }
+                this.array[i] = e;
+                this.size++;
+                createFrame({ list: this.clone(), colors: [...colors] })
+            }
+            remove(i) {
+                let old = this.array[i];
+                //this.array.copyWithin(i, i + 1);
+                for (let j = i; j < this.size - 1; j++) {
+                    this.array[j] = this.array[j + 1];
+                    createFrame({ list: this.clone(), colors: [...colors] })
+                }
+                this.size--;
+                createFrame({ list: this.clone(), colors: [...colors] })
+                return old;
+            }
+            get(i) {
+                return this.array[i];
+            }
+            clone() {
+                const c = new ArrayList();
+                c.size = this.size;
+                c.capacity = this.capacity;
+                c.array = this.array.map(i => i);
+                return c;
+            }
+            forEach(consumer) {
+                for (let i = 0; i < this.size; i++) {
+                    consumer(i, this.array[i]);
+                }
+            }
+            forNotUsed(consumer) {
+                for (let i = this.size; i < this.capacity; i++) {
+                    consumer(i, this.array[i]);
+                }
+            }
+        }
+        function drawArrow(x, y, i) {
+            line(x + RectWidth / 2, y, x + RectWidth / 2, y - BigRectMaxHeight - ArrowHeight);
+            fill(255);
+            circle(x + RectWidth / 2, y - BigRectMaxHeight - ArrowHeight - RectWidth / 2, RectWidth);
+            fill(0);
+            text(`${i}`, x + RectWidth / 2, y - BigRectMaxHeight - ArrowHeight - RectWidth / 2 + 4);
+        }
+        const colors = ['#007bff', '#27b629'];
+        function changeColor() {
+            let tmp = colors[0];
+            colors[0] = colors[1];
+            colors[1] = tmp;
+        }
+        function frame(op) {
+            for (let i = 0; i < op.list.capacity; i++) {
+                let x = i * (RectWidth + Spacing);
+                let y = height - (RectWidth + Spacing);
+                drawArrow(x, y, i)
+                if (i < op.list.size) {
+                    fill(op.colors[0]);
+                } else {
+                    fill('#cccccc');
+                }
+                rect(x, y, RectWidth, -RectWidth);
+                fill(255)
+                text(`${op.list.get(i)}`, x + RectWidth / 2, y - 8);
+            }
+
+            if (op.newArray) {
+                for (let i = 0; i < op.newArray.length; i++) {
+                    let x = i * (RectWidth + Spacing);
+                    let y = height;
+                    if (i >= op.list.size) {
+                        drawArrow(x, y, i)
+                    }
+                    fill(op.colors[1]);
+                    rect(x, y, RectWidth, -RectWidth);
+                    fill(255)
+                    text(`${op.newArray[i]}`, x + RectWidth / 2, y - 8);
+                }
+            }
+        }
+
+        function addOptions(ele, size, selectedIdx) {
+            ele.innerHTML = "";
+            for (let i = 0; i <= size; i++) {
+                let option = document.createElement("option");
+                option.innerText = i;
+                ele.appendChild(option);
+            }
+            if (selectedIdx > 0) {
+                ele.selectedIndex = selectedIdx;
+            }
+        }
+        document.getElementById("addLast").onclick = function () {
+            let addIdx = document.getElementById("addIdx");
+            let removeIdx = document.getElementById("removeIdx");
+            let values = document.getElementById("i").value.split(",").map(e => e - 0);
+            values.forEach(e => {
+                list.add({ e: e });
+            })
+            addOptions(addIdx, list.size, list.size);
+            addOptions(removeIdx, list.size - 1);
+        }
+
+        document.getElementById("addBtn").onclick = function () {
+            let addIdx = document.getElementById("addIdx");
+            let removeIdx = document.getElementById("removeIdx");
+            let values = document.getElementById("i").value.split(",").map(e => e - 0);
+            let idx = addIdx.value - 0;
+            values.forEach(e => {
+                list.add({ e: e, index: idx });
+            });
+            addOptions(addIdx, list.size, idx);
+            addOptions(removeIdx, list.size - 1);
+        }
+
+        document.getElementById("removeBtn").onclick = function () {
+            let addIdx = document.getElementById("addIdx");
+            let removeIdx = document.getElementById("removeIdx");
+            let idx = removeIdx.value - 0;
+            list.remove(idx);
+            addOptions(addIdx, list.size);
+            addOptions(removeIdx, list.size - 1, idx);
+        }
+
+        document.getElementById("playBtn").onclick = function () {
+            playFrames();
+        }
+
+        let list;
+        let idx = 0;
+        let lastIdx = -1;
+        const frames = [];
+        const RectWidth = 24;
+        const Spacing = 2;
+        const BigRectMaxHeight = 100;
+        const ArrowHeight = 30;
+        function setup() {
+            createCanvas(800, 300);
+            textSize(10);
+            textAlign(CENTER);
+            list = new ArrayList();
+            createFrame({ list: list.clone(), colors: [...colors] })
+        }
+        function playFrames() {
+            if (idx >= frames.length - 1) {
+                return;
+            }
+            idx++;
+            setTimeout(playFrames, 300)
+        }
+        function draw() {
+            if (idx != lastIdx) {
+                background(255);
+                frames[idx]();
+                lastIdx = idx;
+            }
+        }
+    </script>
+</body>
+
+</html>

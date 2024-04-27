@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<!--文本框-->
+<input type="text" name="name" id="n">
+<!--按钮-->
+<input type="button" value="say hello" id="b"/>
+<h4></h4>
+<script type="text/javascript">
+    // 按钮的点击事件
+    document.querySelector("#b").onclick = function(){
+        // 获取用户在文本框输入的值
+        var n = document.querySelector("#n").value;
+        // 发送请求
+        fetch("http://localhost:8080/hello?name=" + n)
+            .then(resp=>resp.text())
+            .then(text=>{
+                document.querySelector("h4").innerText = text;
+            })
+    }
+</script>
+</body>
+</html>

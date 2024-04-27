@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态数组</title>
+    <style>
+        #buttons {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 250px;
+        }
+
+        #controller {
+            position: absolute;
+            left: 0;
+            bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="controller">
+        <div>
+            <input type="text" id="i" value="1">
+            <select id="addIdx">
+                <option>0</option>
+            </select>
+            <input type="button" value="insert" id="insertBtn" />
+            <input type="button" value="addFirst" id="addFirst" />
+            <input type="button" value="addLast" id="addLast" />
+        </div>
+        <div>
+            <select id="removeIdx"></select>
+            <input type="button" value="remove" id="removeBtn" />
+            <input type="button" value="removeFirst" id="removeFirst" />
+            <input type="button" value="removeLast" id="removeLast" />
+        </div>
+    </div>
+    <div id="buttons"><input type="button" value="play" id="playBtn" /></div>
+    <script src="p5.js"></script>
+    <script>
+        function createFrame(op) {
+            let i = frames.length;
+            let btn = document.createElement("input");
+            btn.type = "button";
+            btn.value = `${i}`;
+            btn.onclick = function () {
+                idx = i;
+            }
+            document.getElementById("buttons").appendChild(btn)
+            frames.push(function () { frame(op) });
+        }
+        class Node {
+            constructor(p, e, n) {
+                this.p = p;
+                this.e = e;
+                this.n = n;
+                this.x;
+                this.y;
+            }
+        }
+        class LinkedList {
+            constructor() {
+                this.size = 0;
+                this.head = new Node(null, "head", this.tail);
+                this.tail = new Node(this.head, "last", null);
+                this.head.n = this.tail;
+                this.tail.p = this.head;
+                this.lx = width / 2;
+                this.rx = width / 2 + (RectWidth + Spacing);
+                this.y = height / 2;
+                this.dir = true;
+            }
+            forEach(consumer) {
+                for (let node = this.head.n; node !== this.tail; node = node.n) {
+                    consumer(node.e)
+                }
+            }
+            forEachNode(consumer) {
+                for (let node = this.head.n; node !== this.tail; node = node.n) {
+                    consumer(node)
+                }
+            }
+            insert(op) {
+                if (op.idx === 0) {
+                    this.addFirst(op.e);
+                    return;
+                }
+                if (op.idx === this.size - 1) {
+                    this.addLast(op.e);
+                    return;
+                }
+                let idx = 0;
+                for (let node = this.head.n; node !== this.tail; node = node.n, idx++) {
+                    if (idx === op.idx) {
+                        // 0 <-> 1 <-> 2 <-> 3
+                        // 0 <-> 1 <-> n <-> 2 <-> 3
+                        let newNode = new Node(node.p, op.e, node);
+                        node.p = newNode;
+                        newNode.p.n = newNode;
+                        newNode.x = newNode.p.x + (node.x - newNode.p.x) / 2;
+                        newNode.y = this.y - random(0, CanvasHeight / 2) + RectHeight
+                        this.size++;
+                        createFrame({ list: this.clone() })
+                        break;
+                    }
+                }
+            }
+            remove(op) {
+                if (op.idx === 0) {
+                    this.removeFirst(op.e);
+                    return;
+                }
+                if (op.idx === this.size - 1) {
+                    this.removeLast(op.e);
+                    return;
+                }
+                let idx = 0;
+                for (let node = this.head.n; node !== this.tail; node = node.n, idx++) {
+                    if (idx === op.idx) {
+                        // 0 <-> 1 <-> n <-> 3 <-> 4
+                        // 0 <-> 1 <-> 3 <-> 4
+                        node.p.n = node.n;
+                        node.n.p = node.p;
+                        this.size--;
+                        createFrame({ list: this.clone() })
+                        break;
+                    }
+                }
+            }
+            addFirst(e) {
+                let node = new Node(this.head, e, this.head.n);
+                node.n.p = node;
+                this.head.n = node;
+                node.x = this.lx;
+                node.y = this.y - random(0, CanvasHeight / 2) + RectHeight
+                // node.y = this.dir ? this.y + RectHeight * 4 : this.y - RectHeight * 4
+                this.lx -= (RectWidth + Spacing)
+                this.size++;
+                // this.dir = !this.dir;
+                createFrame({ list: this.clone() })
+            }
+            addLast(e) {
+                let node = new Node(this.tail.p, e, this.tail);
+                node.p.n = node;
+                this.tail.p = node;
+                node.x = this.rx;
+                node.y = this.y - random(0, CanvasHeight / 2) + RectHeight
+                // node.y = this.dir ? this.y + RectHeight * 4 : this.y - RectHeight * 4
+                this.rx += (RectWidth + Spacing)
+                this.size++;
+                createFrame({ list: this.clone() });
+            }
+            removeFirst() {
+                if (this.size == 0) {
+                    return;
+                }
+                let node = this.head.n;
+                this.head.n = node.n;
+                node.n.p = this.head;
+                this.size--;
+                createFrame({ list: this.clone() });
+            }
+            removeLast() {
+                if (this.size == 0) {
+                    return;
+                }
+                let node = this.tail.p;
+                this.tail.p = node.p;
+                node.p.n = this.tail;
+                this.size--;
+                createFrame({ list: this.clone() });
+            }
+            clone() {
+                let newList = new LinkedList();
+                this.forEachNode(n => {
+                    let node = new Node(newList.tail.p, n.e, newList.tail);
+                    node.p.n = node;
+                    newList.tail.p = node;
+                    node.x = n.x;
+                    node.y = n.y;
+                    newList.size++;
+                })
+                return newList;
+            }
+
+        }
+        function drawArrow(x1, y1, x2, y2) {
+            var offset = 5;
+            line(x1, y1, x2, y2); //draw a line beetween the vertices
+            var th = 0.3;
+            // this code is to make the arrow point
+            push() //start new drawing state
+            var angle = atan2(y1 - y2, x1 - x2); //gets the angle of the line
+            translate(x2, y2); //translates to the destination vertex
+            rotate(angle - HALF_PI); //rotates the arrow point
+            line(-offset * th, offset, 0, -offset * th)
+            line(offset * th, offset, 0, -offset * th)
+            pop();
+        }
+        function frame(op) {
+            let last = null;
+            op.list.forEachNode(node => {
+                // console.log(node)
+                if (last != null) {
+                    fill('black')
+                    drawArrow(node.x - 5, node.y - RectHeight / 2, last.x + RectWidth / 2 + 4, (last.y > node.y) ? last.y - RectHeight : last.y)
+                    drawArrow(last.x + RectWidth + 5, last.y - RectHeight / 2, node.x + RectWidth / 2 - 4, (last.y > node.y) ? node.y : node.y - RectHeight)
+                }
+                last = node;
+            })
+            op.list.forEachNode(node => {
+                fill('#007bff');
+                rect(node.x, node.y, RectWidth, -RectHeight);
+                fill('#CCFF00');
+                rect(node.x, node.y, -5, -RectHeight)
+                fill('#FFB600');
+                rect(node.x + RectWidth, node.y, 5, -RectHeight)
+                fill(255)
+                text(`${node.e}`, node.x + RectWidth / 2, node.y - RectHeight / 2 + 4);
+            })
+        }
+        function addOptions(ele, size, selectedIdx) {
+            ele.innerHTML = "";
+            for (let i = 0; i <= size; i++) {
+                let option = document.createElement("option");
+                option.innerText = i;
+                ele.appendChild(option);
+            }
+            if (selectedIdx > 0) {
+                ele.selectedIndex = selectedIdx;
+            }
+        }
+        document.getElementById("addLast").onclick = function () {
+            let addIdx = document.getElementById("addIdx");
+            let removeIdx = document.getElementById("removeIdx");
+            let e = document.getElementById("i").value;
+            list.addLast(e);
+            addOptions(addIdx, list.size, list.size);
+            addOptions(removeIdx, list.size - 1);
+        }
+
+        document.getElementById("addFirst").onclick = function () {
+            let addIdx = document.getElementById("addIdx");
+            let removeIdx = document.getElementById("removeIdx");
+            let e = document.getElementById("i").value;
+            list.addFirst(e);
+            addOptions(addIdx, list.size, 0);
+            addOptions(removeIdx, list.size - 1);
+        }
+
+        document.getElementById("insertBtn").onclick = function () {
+            let addIdx = document.getElementById("addIdx");
+            let removeIdx = document.getElementById("removeIdx");
+            let e = document.getElementById("i").value;
+            let idx = addIdx.value - 0;
+            list.insert({ e: e, idx: idx });
+            addOptions(addIdx, list.size, idx);
+            addOptions(removeIdx, list.size - 1);
+        }
+
+        document.getElementById("removeBtn").onclick = function () {
+            let addIdx = document.getElementById("addIdx");
+            let removeIdx = document.getElementById("removeIdx");
+            let idx = removeIdx.value - 0;
+            list.remove({ idx: idx });
+            addOptions(addIdx, list.size, 0);
+            addOptions(removeIdx, list.size - 1, idx > list.size - 1 ? list.size - 1 : idx);
+        }
+
+        document.getElementById("removeFirst").onclick = function () {
+            let addIdx = document.getElementById("addIdx");
+            let removeIdx = document.getElementById("removeIdx");
+            list.removeFirst();
+            addOptions(addIdx, list.size);
+            addOptions(removeIdx, list.size - 1, 0);
+        }
+
+        document.getElementById("removeLast").onclick = function () {
+            let addIdx = document.getElementById("addIdx");
+            let removeIdx = document.getElementById("removeIdx");
+            list.removeLast();
+            addOptions(addIdx, list.size);
+            addOptions(removeIdx, list.size - 1, list.size - 1);
+        }
+
+        document.getElementById("playBtn").onclick = function () {
+            playFrames();
+        }
+
+        let list;
+        let idx = 0;
+        let lastIdx = -1;
+        const frames = [];
+        const CanvasHeight = 300;
+        const RectWidth = 20;
+        const RectHeight = 12;
+        const Spacing = 50;
+        const BigRectMaxHeight = 100;
+        const ArrowHeight = 30;
+        function setup() {
+            createCanvas(800, CanvasHeight);
+            textSize(10);
+            textAlign(CENTER);
+            list = new LinkedList();
+            createFrame({ list: list.clone() })
+            // list.addFirst(1)
+            // list.addFirst(2)
+            // list.addFirst(3)
+            // list.addLast(4)
+            // list.addLast(5)
+            // list.addLast(6)
+        }
+        function playFrames() {
+            if (idx >= frames.length - 1) {
+                return;
+            }
+            idx++;
+            setTimeout(playFrames, 300)
+        }
+        function draw() {
+            if (idx != lastIdx) {
+                background(255);
+                frames[idx]();
+                lastIdx = idx;
+            }
+        }
+    </script>
+</body>
+
+</html>
